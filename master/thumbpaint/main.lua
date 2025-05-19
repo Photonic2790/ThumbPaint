@@ -1,4 +1,4 @@
--- ThunbPaint: By Photonic2790@github.com
+-- ThumbPaint: By Photonic2790@github.com
 --[[Description:
 Day one of writing a cross-platform high level image editor in love2d
 Designed for use on handheld consoles with MUOS
@@ -15,10 +15,10 @@ local WINDOWWIDTH  = width
 local WINDOWHEIGHT = height
 
 -- fixed canvas size, change it here
-local cx = 16 -- canvas x size
-local cy = 16 -- canvas y size
+local cx = 64 -- canvas x size
+local cy = 64 -- canvas y size
 
-local zoom = 16 -- adjusted with mouse wheel
+local zoom = 8 -- adjusted with mouse wheel
 
 -- starts centered 
 local xoff = width/2-(cx*zoom)/2
@@ -26,7 +26,7 @@ local yoff = height/2-(cy*zoom)/2
 
 
 -- one tool per execution until toolbar gets written, set the tool here
-local TOOL = 2 -- 0 = pencil, 1 = move, 2 = rectangle select
+local TOOL = 0 -- 0 = pencil, 1 = move, 2 = rectangle select
 
 -- these are used by the program
 local lastx = 0
@@ -114,7 +114,6 @@ function love.keypressed(k)
             love.graphics.setCanvas()
     
         elseif k == "b" then
-            love.graphics.setColor(0,0,0,0)
             love.graphics.setCanvas(canvas)
             love.graphics.setScissor((love.mouse.getX()-xoff)/zoom, (love.mouse.getY()-yoff)/zoom,1,1)
             love.graphics.clear()

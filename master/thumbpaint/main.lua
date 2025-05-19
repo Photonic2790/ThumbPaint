@@ -13,12 +13,39 @@ width = 640 -- debugging on desktop, forcing window size here
 height = 480
 local WINDOWWIDTH  = width
 local WINDOWHEIGHT = height
+local BGCOLOR = { .2,  .2,  .2 }
+
+--[[ todo: trim these rgb vars down ]]
+-- rgb strings RRGGBB hex
+local redSTR = ""
+local greenSTR = ""
+local blueSTR = ""
+
+-- r,g,b 0 to 1
+local r = 0.01 
+local g = 0.01 
+local b = 0.01
+local tempR = 0.01 
+local tempG = 0.01 
+local tempB = 0.01
+
+-- red,green,blue 0 to 255 
+local red   = 0
+local green = 0
+local blue  = 0
+local tempRed   = 0
+local tempGreen = 0
+local tempBlue  = 0
 
 -- fixed canvas size, change it here
-local cx = 64 -- canvas x size
-local cy = 64 -- canvas y size
+local cx = 32 -- canvas x size
+local cy = 48 -- canvas y size
 
+-- mouse
 local zoom = 8 -- adjusted with mouse wheel
+local mx = 0
+local my = 0
+local mdelay = 0
 
 -- starts centered 
 local xoff = width/2-(cx*zoom)/2
@@ -26,7 +53,7 @@ local yoff = height/2-(cy*zoom)/2
 
 
 -- one tool per execution until toolbar gets written, set the tool here
-local TOOL = 0 -- 0 = pencil, 1 = move, 2 = rectangle select
+local TOOL = 3 -- 0 = pencil, 1 = move, 2 = rectangle select, 3 = color picker 
 
 -- these are used by the program
 local lastx = 0
@@ -37,8 +64,10 @@ local SELMODE = 0 -- a selection helper, 0 = empty 1 = between points, 2 = full
 
 --[[
 todo list, 
+color - rgb sliders, plus color picker 
+
 priority 1
-flexable toolbar, new file(change canvas size), open file, 
+flexable toolbar, new file(change canvas size), open file,
 
 priority 2
 save as, draw {lines, circles, rects, with and without fills}
@@ -55,16 +84,50 @@ function love.load()
     love.mouse.setVisible(false)
     testPNG = love.graphics.newImage("test.png")
 
+    dot = love.graphics.newImage("gfx/dot.png")
+    line = love.graphics.newImage("gfx/line.png")
+
     love.graphics.setCanvas(canvas)
     love.graphics.draw(testPNG)
     love.graphics.setCanvas()
 end
 
 function love.draw()
+
+    redSTR = string.format("%02x", red)
+    greenSTR = string.format("%02x", green)
+    blueSTR = string.format("%02x", blue)
+
 	drawGrid(.5,.5,.5,1)
     love.graphics.setColor(1,1,1,1)
     love.graphics.draw(canvas,xoff,yoff,0,zoom,zoom)
     drawGrid(.2,.2,.2,.3)
+
+    mx, my = love.mouse.getPosition()
+    mdelay = mdelay + 1
+
+
+    if TOOL == 3 then -- colour picker
+        drawColorSlider()
+        if (mdelay >= 1 and love.mouse.isDown(1) or love.mouse.isDown(2) or love.mouse.isDown(3)) then
+            if (mx < 516 and my < 29) then -- red slider
+                mdelay = 0
+                red = math.floor(mx/2)
+                if red > 255 then red = 255 end
+                r = red/255
+            elseif (mx < 516 and my < 51) then -- green slider
+                mdelay = 0
+                green = math.floor(mx/2)
+                if green > 255 then green = 255 end
+                g = green/255
+            elseif (mx < 516 and my < 73) then -- blue slider
+                mdelay = 0
+                blue = math.floor(mx/2)
+                if blue > 255 then blue = 255 end
+                b = blue/255
+            end
+        end
+    end
 
     love.graphics.setColor(1,1,1,1)
     love.graphics.draw(cursor, love.mouse.getX(), love.mouse.getY())
@@ -98,6 +161,67 @@ function drawGrid(r,g,b,a)
     end
 end
 
+function drawColorSlider()    
+    x=0
+    while x < 255 do -- the slider bars
+        love.graphics.setColor(.7,.7,.7,1)
+        love.graphics.draw(dot, x*2-2, 2)    -- white backdrop  
+        love.graphics.draw(dot, x*2-2, 20)   -- white backdrop      
+        love.graphics.draw(dot, x*2-2, 40)   -- white backdrop      
+        love.graphics.draw(dot, x*2-2, 58)   -- white backdrop      
+        love.graphics.setColor(x/255,0,0,1)
+        love.graphics.draw(dot, x*2-4, 10)   -- red
+        love.graphics.setColor(0,x/255,0,1)
+        love.graphics.draw(dot, x*2-4, 30)   -- green
+        love.graphics.setColor(0,0,x/255,1)
+        love.graphics.draw(dot, x*2-4, 50)   -- blue
+        x = x + 2
+    end
+    
+    -- the slider line
+    love.graphics.setColor(1,1,1,1)
+    love.graphics.draw(line, red * 2,   10)
+    love.graphics.draw(line, green * 2, 30)
+    love.graphics.draw(line, blue * 2,  50)
+
+
+    x=530
+    love.graphics.setColor(r,0,0,1)
+    love.graphics.draw(dot, x, 10)  
+    love.graphics.setColor(0,g,0,1)
+    love.graphics.draw(dot, x, 30)  
+    love.graphics.setColor(0,0,b,1)
+    love.graphics.draw(dot, x, 50)
+        
+    -- behind buffer color  
+    y=10
+    x=560
+    z=-1
+    while y < 52 do
+        while x < 604 do
+            love.graphics.setColor(.5+z*.4,.5+z*.4,.5+z*.4,1)
+            love.graphics.draw(dot, x, y)
+            x = x + 4
+            z = z * -1
+        end
+        x = 560
+        y = y + 4
+    end
+
+    love.graphics.setColor(r,g,b,1) 
+    y=20
+    x=570
+    while y < 44 do
+        while x < 594 do
+            love.graphics.draw(dot, x, y)
+            x = x + 4
+        end
+        x = 570
+        y = y + 4
+    end
+    love.graphics.print("HEXCODE : "..redSTR..greenSTR..blueSTR, 540, 80)    
+end
+
 function love.keypressed(k)
 
     if k == "return" then
@@ -106,9 +230,14 @@ function love.keypressed(k)
         imagedata:encode("png", "test.png")
     end
 
+    if k == "space" then
+        TOOL = TOOL + 1
+        if TOOL > 3 then TOOL = 0 end
+    end
+
     if TOOL == 0 then -- pencil
         if k == "a" then
-            love.graphics.setColor(1,1,1,1)
+            love.graphics.setColor(r,g,b,1)
             love.graphics.setCanvas(canvas)
             love.graphics.points((love.mouse.getX()-xoff)/zoom, (love.mouse.getY()-yoff)/zoom)
             love.graphics.setCanvas()

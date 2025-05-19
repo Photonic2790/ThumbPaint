@@ -219,7 +219,9 @@ function drawColorSlider()
         x = 570
         y = y + 4
     end
-    love.graphics.print("HEXCODE : "..redSTR..greenSTR..blueSTR, 540, 80)    
+
+    love.graphics.setColor(1,1,1,1) 
+    love.graphics.print("HEXCODE : "..redSTR..greenSTR..blueSTR, 520, 80)    
 end
 
 function love.keypressed(k)

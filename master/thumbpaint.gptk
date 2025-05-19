@@ -1,0 +1,38 @@
+a = a
+a = repeat
+b = b
+b = repeat
+x = x
+x = repeat
+y = y
+y = repeat
+
+up = up
+down = down
+left = left
+right = right
+
+l1 = mouse_left
+r1 = mouse_right
+l2 = l
+r2 = r
+l3 = leftctrl
+r3 = rightctrl
+
+back = space
+start = enter
+
+left_analog_up = mouse_movement_up
+
+right_analog_up = up
+right_analog_up = repeat
+right_analog_down = down
+right_analog_down = repeat
+right_analog_left = left
+right_analog_left = repeat
+right_analog_right = right
+right_analog_right = repeat
+
+deadzone_triggers = 3000
+mouse_scale = 6000
+mouse_delay = 16

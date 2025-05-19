@@ -226,6 +226,15 @@ end
 
 function love.keypressed(k)
 
+    if k == "r" then
+        zoom = zoom + 1
+        if zoom > 256 then zoom = 256 end
+    end
+    if k == "l" then
+        zoom = zoom - 1
+        if zoom < .5 then zoom = .5 end
+    end
+
     if k == "return" then
         love.graphics.setCanvas()    
         local imagedata = canvas:newImageData()

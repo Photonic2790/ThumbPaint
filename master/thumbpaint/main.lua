@@ -2,7 +2,7 @@
 --[[Description:
 A cross-platform high level image editor in love2d
 Designed for use on handheld consoles
-May 19th, 2024
+May 20th, 2024
 ]]
 
 --[[Controls:

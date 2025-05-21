@@ -7,18 +7,17 @@ x = repeat
 y = y
 y = repeat
 
-
 up = mouse_movement_up
 
-l1 = mouse_left
-r1 = mouse_right
-l2 = l
-r2 = r
+l1 = pageup
+l2 = pagedown
+
+r1 = mouse_left
+r2 = mouse_right
 
 back = space
 start = enter
 
-
 deadzone_triggers = 3000
 mouse_scale = 6000
-mouse_delay = 16
+mouse_delay = 24

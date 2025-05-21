@@ -12,10 +12,12 @@ down = down
 left = left
 right = right
 
-l1 = mouse_left
-r1 = mouse_right
-l2 = l
-r2 = r
+l1 = pageup
+l2 = pagedown
+
+r1 = mouse_left
+r2 = mouse_right
+
 l3 = leftctrl
 r3 = rightctrl
 
@@ -35,4 +37,4 @@ right_analog_right = repeat
 
 deadzone_triggers = 3000
 mouse_scale = 6000
-mouse_delay = 16
+mouse_delay = 24

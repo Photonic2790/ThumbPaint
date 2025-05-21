@@ -6,33 +6,33 @@ May 19th, 2024
 ]]
 
 --[[Controls:
-Mouse, emulated with "L-stick", "L1" = mouse button 1 (Left click), "R1" = mouse button 2 (right click)
+Mouse, emulated with "L-stick", "R1" = mouse button 1 (Left click), "R2" = mouse button 2 (right click)
     -- usb mouse also works
 
             handheld  --  key/mouse
-ANYTOOL     "start"   or  "RETURN"      - save as ".local/share/love/thumbpaint/test.png"
+ANYTOOL     "start"   or  "RETURN"      - save as ".local/share/love/thumbpaint/temp.png"
             "select"  or  "SPACE"       - change tool
-            "L2"      or  "wheel down"  - (zoom out) 
-            "R2"      or  "wheel up"    - (zoom in)
+            "L1"      or  "wheel up"    - zoom in
+            "L2"      or  "wheel down"  - zoom out 
             "D-PAD"   or  "arrows"      - move canvas
             "R-Stick"                   - move canvas
 
 0
-PENCIL      "L1"      or  "Left-click"  - draw pixel
-            "R1"      or  "Right-click" - color grab
+PENCIL      "R1"      or  "Left-click"  - draw pixel
+            "R2"      or  "Right-click" - color grab
             "X"       or  "X"           - erase pixel
 
 1
-MOVE        "L1"      or  "Left-click"  - hold to drag canvas
+MOVE        "R1"      or  "Left-click"  - hold to drag canvas
 
 2
-SELECT      "L1"      or  "Left-click"  - hold to set selection box
+SELECT      "R1"      or  "Left-click"  - hold to set selection box
             "X"       or  "X"           - erase selection
             "B"       or  "B"           - clears selection
 
 3
-COLOR       "L1"      or  "Left-click"  - use on sliders r,g,b,a to set color
-            "R1"      or  "Right-click" - color grab
+COLOR       "R1"      or  "Left-click"  - use on sliders r,g,b,a to set color
+            "R2"      or  "Right-click" - color grab
 
 ]]
 
@@ -60,12 +60,12 @@ local WINDOWHEIGHT = height
 local BGCOLOR = { .2,  .2,  .2 }
 
 --[[ todo: trim these rgb vars down ]]
--- rgb strings RRGGBB hex
-
+--      Dec R     G     B     A    Hex R, G, B, A
+-- RGBA = { 0.01, 0.01, 0.01, 1.00,    0, 0, 0, 255 }
 -- r,g,b,a 0 to 1
-local r = 0.01 
-local g = 0.01 
-local b = 0.01
+local r = 0.00 
+local g = 0.00 
+local b = 0.00
 local a = 1.00
 
 -- red,green,blue,alpha 0 to 255 
@@ -79,19 +79,19 @@ local cx = 16 -- canvas x size
 local cy = 16 -- canvas y size
 
 -- mouse
-local zoom = 16 -- adjusted with mouse wheel
+local zoom = 1 -- adjusted with mouse wheel
 local mx = 0
 local my = 0
 
 -- starts centered 
-local xoff = width/2-(cx*zoom)/2
-local yoff = height/2-(cy*zoom)/2
-
+local xoff = (width-(cx*zoom))/2
+local yoff = (height-(cy*zoom))/2
 
 -- press "space" or "back" or "SE" or "select" to change the current tool at the moment
 local TOOL = 3 -- 0 = pencil, 1 = move, 2 = rectangle select, 3 = color picker 
 
 -- these are used by the program
+local flag = { 0, 0, 0, 0, 0 } -- todo remove lifted and selmode, use this
 local lastx = 0
 local lasty = 0
 local LIFTED = 0 -- 0 = empty, 1 = canvas, 2 = selection
@@ -102,46 +102,49 @@ local SELMODE = 0 -- a selection helper, 0 = empty 1 = between points, 2 = full
 function love.load()
     love.window.setTitle(TITLE)
     love.window.setMode(WINDOWWIDTH, WINDOWHEIGHT, {resizable=true, vsync=0, minwidth=320, minheight=240})
-    canvas = love.graphics.newCanvas(cx, cy)
+    love.graphics.setBackgroundColor(BGCOLOR)
     cursor = love.graphics.newImage("gfx/cursor.png")
     love.mouse.setVisible(false)
-    testPNG = love.graphics.newImage("test.png")
 
     dot = love.graphics.newImage("gfx/dot.png")
     line = love.graphics.newImage("gfx/line.png")
 
+    loadImageFile("default.png")
+
+end
+
+function loadImageFile(fileName) -- File
+
+    imageFile = love.graphics.newImage(fileName)
+    -- dynamically change canvas at image load
+    local w = imageFile:getWidth()
+    local h = imageFile:getHeight()
+    cx = w
+    cy = h
+
+    canvas = love.graphics.newCanvas(cx, cy)
     love.graphics.setCanvas(canvas)
-    love.graphics.draw(testPNG)
+    love.graphics.draw(imageFile)
     love.graphics.setCanvas()
+
+    xoff = (width-(cx*zoom))/2
+    yoff = (height-(cy*zoom))/2
+
 end
 
 function love.draw()
 
 	drawGrid(.5,.5,.5,1)
-    love.graphics.setColor(1,1,1,1)
-    love.graphics.draw(canvas,xoff,yoff,0,zoom,zoom)
-    drawGrid(.2,.2,.2,.3)
+
+    drawCanvas(1,1,1,1)
+
+    -- drawGrid(.2,.2,.2,.3)
 
     checkTools()
 
-    love.graphics.setColor(1,1,1,1)
-    love.graphics.draw(cursor, love.mouse.getX(), love.mouse.getY())
+    applyTools()
 
-    -- MOVE
-    if LIFTED == 1 then -- CANVAS
-        xoff = love.mouse.getX() - lastx
-        yoff = love.mouse.getY() - lasty
-    end
-
-    -- SELECT
-    if SELMODE == 1 then
-        love.graphics.setColor(1,1,1,1)
-        love.graphics.rectangle("line",(SELECTED[0]*zoom)+xoff,(SELECTED[1]*zoom)+yoff,love.mouse.getX()-((SELECTED[0]*zoom)+xoff),love.mouse.getY()-((SELECTED[1]*zoom)+yoff))
-
-    elseif SELMODE == 2 then
-        love.graphics.setColor(1,1,1,1)
-        love.graphics.rectangle("line",(SELECTED[0]*zoom)+xoff,(SELECTED[1]*zoom)+yoff,((SELECTED[2]*zoom)+xoff)-((SELECTED[0]*zoom)+xoff),((SELECTED[3]*zoom)+yoff)-((SELECTED[1]*zoom)+yoff))
-    end
+    drawCursor()
 
 end
 
@@ -207,14 +210,42 @@ function checkTools()
     end
 end
 
-function drawGrid(r,g,b,a)
-    love.graphics.setColor(r,g,b,a)
+function applyTools()
+    -- MOVE
+    if LIFTED == 1 then -- CANVAS
+        xoff = love.mouse.getX() - lastx
+        yoff = love.mouse.getY() - lasty
+    end
+
+    -- SELECT
+    if SELMODE == 1 then
+        love.graphics.setColor(1,1,1,1)
+        love.graphics.rectangle("line",(SELECTED[0]*zoom)+xoff,(SELECTED[1]*zoom)+yoff,love.mouse.getX()-((SELECTED[0]*zoom)+xoff),love.mouse.getY()-((SELECTED[1]*zoom)+yoff))
+
+    elseif SELMODE == 2 then
+        love.graphics.setColor(1,1,1,1)
+        love.graphics.rectangle("line",(SELECTED[0]*zoom)+xoff,(SELECTED[1]*zoom)+yoff,((SELECTED[2]*zoom)+xoff)-((SELECTED[0]*zoom)+xoff),((SELECTED[3]*zoom)+yoff)-((SELECTED[1]*zoom)+yoff))
+    end
+end
+
+function drawGrid(Gr,Gg,Gb,Ga)
+    love.graphics.setColor(Gr,Gg,Gb,Ga)
     for x = 0, cx*zoom, zoom do --vert
         love.graphics.line(xoff+x, yoff+0, xoff+x, yoff+cy*zoom)
     end
     for y = 0, cy*zoom, zoom do --horz
         love.graphics.line(xoff+0, yoff+y, xoff+cx*zoom, yoff+y)
     end
+end
+
+function drawCanvas(Cr,Cg,Cb,Ca)
+    love.graphics.setColor(Cr,Cg,Cb,Ca)
+    love.graphics.draw(canvas,xoff,yoff,0,zoom,zoom)
+end
+
+function drawCursor()
+    love.graphics.setColor(1,1,1,1)
+    love.graphics.draw(cursor, love.mouse.getX(), love.mouse.getY())
 end
 
 function drawColorSlider()    
@@ -283,24 +314,31 @@ function drawColorSlider()
     end
 
     love.graphics.setColor(1,1,1,1) 
-    love.graphics.print("R:"..string.format("%02X", red).." G:"..string.format("%02X", green).." B:"..string.format("%02X", blue).." A:"..string.format("%02X", alpha), 530, 80)    
+    love.graphics.print("R:"..string.format("%02X", red).." G:"..string.format("%02X", green).." B:"..string.format("%02X", blue).." A:"..string.format("%02X", alpha), 520, 90)    
 end
 
 function love.keypressed(k)
 
-    if k == "r" then
-        zoom = zoom + 1
-        if zoom > 256 then zoom = 256 end
+    if k == "n" then
+        loadImageFile("test.png")
+        -- todo: test gptokey text input to load a file
+            -- otherwise use a dedicated input folder and show a list.. for ipairs...
+            -- a simple folder icon on the toolbar will do, until a top menubar shows up 
     end
-    if k == "l" then
-        zoom = zoom - 1
+
+    if k == "pageup" then
+        zoom = zoom + .25
+        if zoom > 100 then zoom = 100 end
+    end
+    if k == "pagedown" then
+        zoom = zoom - .25
         if zoom < .5 then zoom = .5 end
     end
 
     if k == "return" then
         love.graphics.setCanvas()    
         local imagedata = canvas:newImageData()
-        imagedata:encode("png", "test.png")
+        imagedata:encode("png", "temp.png")
     end
 
     if k == "space" then
@@ -360,7 +398,7 @@ function love.keypressed(k)
 end
 
 
-function love.mousepressed(x, y, button, it) -- look for isDown() also throughout checkTools()
+function love.mousepressed(x, y, button, it, p) -- look for isDown() also throughout checkTools()
     if button == 1 then
         if TOOL == 1 then -- move
             if LIFTED == 0 then
@@ -380,7 +418,7 @@ function love.mousepressed(x, y, button, it) -- look for isDown() also throughou
     end
 end
 
-function love.mousereleased(x, y, button, it) 
+function love.mousereleased(x, y, button, it, p) 
     if button == 1 then
         if TOOL == 1 then -- move
             LIFTED = 0 -- EMPTY, DOWN
@@ -396,11 +434,11 @@ end
 
 function love.wheelmoved(x, y) 
     if y > 0 then
-        zoom = zoom + 1
-        if zoom > 256 then zoom = 256 end
+        zoom = zoom + .25
+        if zoom > 100 then zoom = 100 end
     end
     if y < 0 then
-        zoom = zoom - 1
-        if zoom < .5 then zoom = .5 end
+        zoom = zoom - .25
+        if zoom < .25 then zoom = .25 end
     end
 end

@@ -20,11 +20,7 @@ get_controls
 GAMEDIR=/$directory/MUOS/application/ThumbPaint
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
-if [[ "${DEVICE_NAME^^}" == *'RG35XX'*'SP'* ]] || [[ "${DEVICE_NAME^^}" == *'RG28XX'* ]]; then
-    GPTOKEYB_CONFIG="./thumbpaint-nosticks.gptk"  
-else
-    GPTOKEYB_CONFIG="./thumbpaint.gptk"
-fi
+GPTOKEYB_CONFIG="./thumbpaint.gptk"
 
 cd $GAMEDIR
 

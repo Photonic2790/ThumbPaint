@@ -14,6 +14,7 @@ right = right
 
 l1 = pageup
 l2 = pagedown
+l3 = mouse_middle
 
 r1 = mouse_left
 r2 = mouse_right

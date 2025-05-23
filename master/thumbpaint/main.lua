@@ -2,7 +2,7 @@
 --[[Description:
 A cross-platform high level image editor in love2d
 Designed for use on handheld consoles
-May 20th, 2024
+May 23rd, 2025
 ]]
 
 --[[Controls:
@@ -14,8 +14,9 @@ ANYTOOL     "start"   or  "RETURN"      - save as ".local/share/love/thumbpaint/
             "select"  or  "SPACE"       - change tool
             "L1"      or  "wheel up"    - zoom in
             "L2"      or  "wheel down"  - zoom out 
-            "D-PAD"   or  "arrows"      - move canvas
-            "R-Stick"                   - move canvas
+            "L3"      or  "mid mouse"   - click to drag/drop canvas
+            "D-PAD"   or  "arrows"      - move canvas (deprecated)
+            "R-Stick"                   - move canvas (deprecated)
 
 0
 PENCIL      "R1"      or  "Left-click"  - draw pixel
@@ -23,12 +24,12 @@ PENCIL      "R1"      or  "Left-click"  - draw pixel
             "X"       or  "X"           - erase pixel
 
 1
-MOVE        "R1"      or  "Left-click"  - hold to drag canvas
+MOVE        "R1"      or  "Left-click"  - hold to drag canvas (to become a layer/selection type move)
 
 2
 SELECT      "R1"      or  "Left-click"  - hold to set selection box
             "X"       or  "X"           - erase selection
-            "B"       or  "B"           - clears selection
+            "B"       or  "B"           - cancels selection
 
 3
 COLOR       "R1"      or  "Left-click"  - use on sliders r,g,b,a to set color
@@ -53,8 +54,8 @@ local TITLE = "ThumbPaint"
 local width, height = love.window.getMode()
 love.window.setMode(width, height, {fullscreen=true, resizable=true, vsync=0, minwidth=320, minheight=240})
 width, height = love.window.getMode()
--- width = 640 -- debugging on desktop, forcing window size here
--- height = 480
+width = 640 -- debugging on desktop, forcing window size here
+height = 480
 local WINDOWWIDTH  = width
 local WINDOWHEIGHT = height
 local BGCOLOR = { .2,  .2,  .2 }
@@ -91,9 +92,10 @@ local yoff = (height-(cy*zoom))/2
 local TOOL = 3 -- 0 = pencil, 1 = move, 2 = rectangle select, 3 = color picker 
 
 -- these are used by the program
-local flag = { 0, 0, 0, 0, 0 } -- todo remove lifted and selmode, use this
+local flag = { 0, 0, 0, 0, 0 } -- todo remove some vars, use this array neatly
 local lastx = 0
 local lasty = 0
+local GRID = true
 local LIFTED = 0 -- 0 = empty, 1 = canvas, 2 = selection
 local SELECTED = { 0, 0, 0, 0 } -- x1, y1, x2, y2
 local SELMODE = 0 -- a selection helper, 0 = empty 1 = between points, 2 = full 
@@ -102,6 +104,7 @@ local SELMODE = 0 -- a selection helper, 0 = empty 1 = between points, 2 = full
 function love.load()
     love.window.setTitle(TITLE)
     love.window.setMode(WINDOWWIDTH, WINDOWHEIGHT, {resizable=true, vsync=0, minwidth=320, minheight=240})
+    love.graphics.setDefaultFilter("nearest", "nearest")
     love.graphics.setBackgroundColor(BGCOLOR)
     cursor = love.graphics.newImage("gfx/cursor.png")
     love.mouse.setVisible(false)
@@ -134,22 +137,28 @@ end
 
 function love.draw()
 
-	drawGrid(.5,.5,.5,1)
+    if GRID then
+	   drawGrid(.5,.5,.5,1) -- under canvas
+    end
 
-    drawCanvas(1,1,1,1)
+    drawCanvas(1,1,1,1) 
 
-    -- drawGrid(.2,.2,.2,.3)
+    if GRID then
+        drawGrid(.2,.2,.2,.3) -- over canvas
+    end
 
-    checkTools()
+    checkTools(385) -- gets inputs and pointer data
 
-    applyTools()
-
+    applyTools() -- draws active tooling 
+    
+    drawToolBarH(15,385) -- x buffer on both sides, y top + 80
+    
     drawCursor()
 
 end
 
 function fetchPixel(x,y)
-    love.graphics.setCanvas()    
+    love.graphics.setCanvas()
     local imagedata = canvas:newImageData()
     local w = imagedata:getWidth()
     local h = imagedata:getHeight()
@@ -169,7 +178,7 @@ function erasePixel(x,y)
     love.graphics.setScissor()
 end
 
-function checkTools()
+function checkTools(y)
 
     mx, my = love.mouse.getPosition()
 
@@ -184,21 +193,21 @@ function checkTools()
             fetchPixel((mx-xoff)/zoom, (my-yoff)/zoom)
         end
     elseif TOOL == 3 then -- colour picker
-        drawColorSlider()
         if love.mouse.isDown(1) then
-            if (mx < 516 and my < 29) then -- red slider
+            if my < y - 80 then return end
+            if (mx < 516 and my < y - 60) then -- red slider
                 red = math.floor(mx/2)
                 if red > 255 then red = 255 end
                 r = red/255
-            elseif (mx < 516 and my < 51) then -- green slider
+            elseif (mx < 516 and my < y - 40) then -- green slider
                 green = math.floor(mx/2)
                 if green > 255 then green = 255 end
                 g = green/255
-            elseif (mx < 516 and my < 73) then -- blue slider
+            elseif (mx < 516 and my < y - 20) then -- blue slider
                 blue = math.floor(mx/2)
                 if blue > 255 then blue = 255 end
                 b = blue/255
-            elseif (mx < 516 and my < 95) then -- alpha slider
+            elseif (mx < 516 and my < y) then -- alpha slider
                 alpha = math.floor(mx/2)
                 if alpha > 255 then alpha = 255 end
                 a = alpha/255
@@ -248,73 +257,83 @@ function drawCursor()
     love.graphics.draw(cursor, love.mouse.getX(), love.mouse.getY())
 end
 
-function drawColorSlider()    
+function drawToolBarH(x,y)
+    love.graphics.setColor(.5,.5,.5,1) 
+    love.graphics.rectangle("fill",x, y, width-x*2, 80)
+    drawCurrentColor(width-x-76,y+4)
+    if TOOL == 3 then -- colour picker
+        drawColorSlider(y-80)
+    end
+end
+
+function drawCurrentColor(x,y) -- x,y = top left 32px radius, 72px sq background
+
+    local m = 1
+    for i = 0, 8 do 
+        for j = 0, 8 do 
+            love.graphics.setColor(.5+m*.4,.5+m*.4,.5+m*.4,1) 
+            love.graphics.rectangle("fill",x+j*8,y+i*8,8,8)
+            m = m * -1
+        end
+    end
+
+    love.graphics.setColor(r,g,b,a) 
+    love.graphics.circle("fill",x+36, y+36, 32)
+end
+
+function checkColourSlider(y)
+
+end
+function drawColorSlider(y)    
+    love.graphics.setColor(.7,.7,.7,1)
+    love.graphics.rectangle("fill", 0, y, 550,80)    -- white backdrop
     x=0
     while x < 255 do -- the slider bars
-        love.graphics.setColor(.7,.7,.7,1)
-        love.graphics.draw(dot, x*2-2, 2)    -- white backdrop  
-        love.graphics.draw(dot, x*2-2, 20)   -- white backdrop      
-        love.graphics.draw(dot, x*2-2, 40)   -- white backdrop      
-        love.graphics.draw(dot, x*2-2, 60)   -- white backdrop
-        love.graphics.draw(dot, x*2-2, 70)   -- behind alpha
         love.graphics.setColor(x/255,0,0,1)
-        love.graphics.draw(dot, x*2-4, 10)   -- red
+        love.graphics.circle("fill", x*2, y+10, 7, 3) -- red
         love.graphics.setColor(0,x/255,0,1)
-        love.graphics.draw(dot, x*2-4, 30)   -- green
+        love.graphics.circle("fill", x*2, y+30, 7, 3) -- green
         love.graphics.setColor(0,0,x/255,1)
-        love.graphics.draw(dot, x*2-4, 50)   -- blue
+        love.graphics.circle("fill", x*2, y+50, 7, 3)  -- blue
         love.graphics.setColor(0,0,0,x/255)
-        love.graphics.draw(dot, x*2-4, 70)   -- alpha
+        love.graphics.circle("fill", x*2, y+70, 7, 3)  -- alpha
         x = x + 2
     end
     
     -- the slider line
     love.graphics.setColor(1,1,1,1)
-    love.graphics.draw(line, red * 2,   10)
-    love.graphics.draw(line, green * 2, 30)
-    love.graphics.draw(line, blue * 2,  50)
-    love.graphics.draw(line, alpha * 2,  70)
+    love.graphics.circle("fill", red * 2,   y+10, 5, 4)
+    love.graphics.circle("fill", green * 2, y+30, 5, 4)
+    love.graphics.circle("fill", blue * 2,  y+50, 5, 4)
+    love.graphics.circle("fill", alpha * 2, y+70, 5, 4)
 
 
-    x=530
+    x=520
     love.graphics.setColor(r,0,0,1)
-    love.graphics.draw(dot, x, 10)  
+    love.graphics.circle("fill", x, y+10, 8)
+    love.graphics.circle("fill", x+20, y+10, 8)
+    love.graphics.rectangle("fill", x, y+2, 20, 16)
     love.graphics.setColor(0,g,0,1)
-    love.graphics.draw(dot, x, 30)  
+    love.graphics.circle("fill", x, y+30, 8)  
+    love.graphics.circle("fill", x+20, y+30, 8)
+    love.graphics.rectangle("fill", x, y+22, 20, 16)
     love.graphics.setColor(0,0,b,1)
-    love.graphics.draw(dot, x, 50)
+    love.graphics.circle("fill", x, y+50, 8)
+    love.graphics.circle("fill", x+20, y+50, 8)
+    love.graphics.rectangle("fill", x, y+42, 20, 16)
     love.graphics.setColor(1,1,1,a)
-    love.graphics.draw(dot, x, 70)
-        
-    -- behind buffer color  
-    y=10
-    x=560
-    z=-1
-    while y < 52 do
-        while x < 604 do
-            love.graphics.setColor(.5+z*.4,.5+z*.4,.5+z*.4,1)
-            love.graphics.draw(dot, x, y)
-            x = x + 4
-            z = z * -1
-        end
-        x = 560
-        y = y + 4
-    end
+    love.graphics.circle("fill", x, y+70, 8)
+    love.graphics.circle("fill", x+20, y+70, 8)
+    love.graphics.rectangle("fill", x, y+62, 20, 16)
 
-    love.graphics.setColor(r,g,b,a) 
-    y=20
-    x=570
-    while y < 44 do
-        while x < 594 do
-            love.graphics.draw(dot, x, y)
-            x = x + 4
-        end
-        x = 570
-        y = y + 4
-    end
-
+    x=516
     love.graphics.setColor(1,1,1,1) 
-    love.graphics.print("R:"..string.format("%02X", red).." G:"..string.format("%02X", green).." B:"..string.format("%02X", blue).." A:"..string.format("%02X", alpha), 520, 90)    
+    love.graphics.print("R:"..string.format("%02X", red),   x, y+3)
+    love.graphics.print("G:"..string.format("%02X", green), x, y+23)
+    love.graphics.print("B:"..string.format("%02X", blue),  x, y+43)
+    love.graphics.setColor(0,0,0,1) 
+    love.graphics.print("A:"..string.format("%02X", alpha), x, y+63)
+        
 end
 
 function love.keypressed(k)
@@ -324,6 +343,14 @@ function love.keypressed(k)
         -- todo: test gptokey text input to load a file
             -- otherwise use a dedicated input folder and show a list.. for ipairs...
             -- a simple folder icon on the toolbar will do, until a top menubar shows up 
+    end
+
+    if k == "g" then
+        if GRID then
+            GRID = false
+        else
+            GRID = true
+        end
     end
 
     if k == "pageup" then
@@ -414,6 +441,16 @@ function love.mousepressed(x, y, button, it, p) -- look for isDown() also throug
             SELECTED[0] = (x-xoff)/zoom
             SELECTED[1] = (y-yoff)/zoom
             SELMODE = 1 -- onto next point
+        end
+    elseif button == 3 then -- move canvas anytime (middle mouse button)
+        if LIFTED == 0 then
+            lastx = x - xoff
+            lasty = y - yoff
+            LIFTED = 1 -- CANVAS
+        else
+            LIFTED = 0 -- EMPTY, DOWN
+            lastx = 0
+            lasty = 0
         end
     end
 end

@@ -91,6 +91,8 @@ local my = 0
 -- starts centered 
 local xoff = (width-(cx*zoom))/2
 local yoff = (height-(cy*zoom))/2
+local bufferxoff = xoff
+local bufferyoff = yoff
 
 -- press "space" or "back" or "SE" or "select" to change the current tool at the moment
 local TOOL = 3 -- 0 = pencil, 1 = move, 2 = rectangle select, 3 = color picker 
@@ -114,6 +116,7 @@ function love.load()
     love.mouse.setVisible(false)
 
     loadImageFile("default.png")
+    buffer = love.graphics.newCanvas(1024, 1024)
 
 end
 
@@ -142,7 +145,10 @@ function love.draw()
 	   drawGrid(.5,.5,.5,1) -- under canvas
     end
 
-    drawCanvas(1,1,1,1) 
+    drawCanvas(xoff,yoff,canvas)
+    if SELMODE > 2 then
+        drawCanvas(bufferxoff,bufferyoff,buffer)
+    end
 
     if GRID then
         drawGrid(.2,.2,.2,.3) -- over canvas
@@ -225,7 +231,10 @@ function applyTools()
     mx, my = love.mouse.getPosition()
 
     -- MOVE
-    if LIFTED == 1 then -- CANVAS
+    if SELMODE == 3 and LIFTED == 1 then -- buffer
+        bufferxoff = mx - lastx
+        bufferyoff = my - lasty
+    elseif LIFTED == 1 then -- CANVAS
         xoff = mx - lastx
         yoff = my - lasty
     end
@@ -251,9 +260,9 @@ function drawGrid(Gr,Gg,Gb,Ga)
     end
 end
 
-function drawCanvas(Cr,Cg,Cb,Ca)
-    love.graphics.setColor(Cr,Cg,Cb,Ca)
-    love.graphics.draw(canvas,xoff,yoff,0,zoom,zoom)
+function drawCanvas(x,y,c)
+    love.graphics.setColor(1,1,1,1)
+    love.graphics.draw(c,x,y,0,zoom,zoom)
 end
 
 function drawCursor()
@@ -263,7 +272,7 @@ end
 
 function drawToolBarH(x,y)
     love.graphics.setColor(.5,.5,.5,1) 
-    love.graphics.rectangle("fill",x, y, width-x*2, 80)
+    love.graphics.rectangle("fill", x, y, width - x * 2, 80)
     drawCurrentColor(width-x-76,y+4)
     if TOOL == 3 then -- colour picker
         drawColorSlider(y-80)
@@ -340,10 +349,26 @@ function drawColorSlider(y)
         
 end
 
+function setSelction()
+    if SELECTED[0] < SELECTED[2] then
+        if SELECTED[1] < SELECTED[3] then
+            love.graphics.setScissor(SELECTED[0], SELECTED[1],SELECTED[2]-SELECTED[0],SELECTED[3]-SELECTED[1])
+        else 
+            love.graphics.setScissor(SELECTED[0], SELECTED[3],SELECTED[2]-SELECTED[0],SELECTED[1]-SELECTED[3])
+        end
+    else
+        if SELECTED[1] < SELECTED[3] then
+            love.graphics.setScissor(SELECTED[2], SELECTED[1],SELECTED[0]-SELECTED[2],SELECTED[3]-SELECTED[1])
+        else 
+            love.graphics.setScissor(SELECTED[2], SELECTED[3],SELECTED[0]-SELECTED[2],SELECTED[1]-SELECTED[3])
+        end
+    end
+end
+
 function love.keypressed(k)
 
     if k == "n" then
-        loadImageFile("test.png")
+        loadImageFile("temp.png")
         -- todo: test gptokey text input to load a file
             -- otherwise use a dedicated input folder and show a list.. for ipairs...
             -- a simple folder icon on the toolbar will do, until a top menubar shows up 
@@ -375,15 +400,18 @@ function love.keypressed(k)
     if k == "space" then
         TOOL = TOOL + 1
         if TOOL > 3 then TOOL = 0 end
-        -- SELMODE = 0 -- todo, keeping selection active properly deal with consequences
+        -- SELMODE = 0 -- todo, keeping selection active. properly deal with consequences
     end
 
-    if k == "b" then -- B to clear selection, anytime for now, todo, check selmode free up b button elsewise
+    if SELMODE > 0 and k == "b" then -- B to clear selection
         SELMODE = 0
         SELECTED[0] = 0
         SELECTED[1] = 0
         SELECTED[2] = 0
         SELECTED[3] = 0
+        love.graphics.setCanvas(buffer)
+        love.graphics.clear()
+        love.graphics.setCanvas()
     end
 
     if TOOL == 0 then -- pencil
@@ -404,26 +432,36 @@ function love.keypressed(k)
     elseif TOOL == 2 then -- select
         
         if SELMODE == 2 then
-            if k == "x" then -- erase
+            if k == "x" then -- cut
+                love.graphics.setCanvas(buffer)
+                love.graphics.clear()
+                setSelction()
+                love.graphics.draw(canvas)
                 love.graphics.setCanvas(canvas)
-                if SELECTED[0] < SELECTED[2] then
-                    if SELECTED[1] < SELECTED[3] then
-                        love.graphics.setScissor(SELECTED[0], SELECTED[1],SELECTED[2]-SELECTED[0],SELECTED[3]-SELECTED[1])
-                    else 
-                        love.graphics.setScissor(SELECTED[0], SELECTED[3],SELECTED[2]-SELECTED[0],SELECTED[1]-SELECTED[3])
-                    end
-                else
-                    if SELECTED[1] < SELECTED[3] then
-                        love.graphics.setScissor(SELECTED[2], SELECTED[1],SELECTED[0]-SELECTED[2],SELECTED[3]-SELECTED[1])
-                    else 
-                        love.graphics.setScissor(SELECTED[2], SELECTED[3],SELECTED[0]-SELECTED[2],SELECTED[1]-SELECTED[3])
-                    end
-                end
-
                 love.graphics.clear()
                 love.graphics.setCanvas()
                 love.graphics.setScissor()
-                SELMODE = 0 -- empty
+                bufferxoff = xoff
+                bufferyoff = yoff
+                SELMODE = 3
+                LIFTED = 1   
+            elseif k == "y" then -- copy
+                love.graphics.setCanvas(buffer)
+                love.graphics.clear()
+                setSelction()
+                love.graphics.draw(canvas,xoff,yoff)
+                love.graphics.setCanvas()
+                love.graphics.setScissor()
+                bufferxoff = xoff
+                bufferyoff = yoff
+                SELMODE = 3
+                LIFTED = 1   
+            end
+        elseif SELMODE == 3 then -- paste
+            if k == "a" then
+                love.graphics.setCanvas(canvas)
+                love.graphics.draw(buffer,bufferxoff,bufferyoff)
+                love.graphics.setCanvas()
             end
         end
     end

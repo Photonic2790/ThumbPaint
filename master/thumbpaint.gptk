@@ -1,3 +1,7 @@
+TEXTINPUTINTERACTIVE="Y"
+TEXTINPUTNOAUTOCAPITALS="Y"
+TEXTINPUTADDEXTRASYMBOLS="Y"
+
 a = a
 a = repeat
 b = b
@@ -18,9 +22,7 @@ l3 = mouse_middle
 
 r1 = mouse_left
 r2 = mouse_right
-
-l3 = leftctrl
-r3 = rightctrl
+r3 = g
 
 back = space
 start = enter

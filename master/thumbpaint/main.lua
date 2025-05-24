@@ -38,7 +38,11 @@ COLOR       "R1"      or  "Left-click"  - use on sliders r,g,b,a to set color
 ]]
 
 --[[
-TODO
+TODO - draw toolbar tool buttons :) 32x32
+
+MENUBAR - mouse operated, simple top down File Edit Image Settings...
+Consider multifile editing and layers, now, early in dev
+Text input, for drawing and file system
 
 priority 1
 flexable toolbar, new file(change canvas size), open file,
@@ -109,9 +113,6 @@ function love.load()
     cursor = love.graphics.newImage("gfx/cursor.png")
     love.mouse.setVisible(false)
 
-    dot = love.graphics.newImage("gfx/dot.png")
-    line = love.graphics.newImage("gfx/line.png")
-
     loadImageFile("default.png")
 
 end
@@ -151,7 +152,7 @@ function love.draw()
 
     applyTools() -- draws active tooling 
     
-    drawToolBarH(15,385) -- x buffer on both sides, y top + 80
+    drawToolBarH(15,385) -- x buffer on both sides, y top + 80 to bottom
     
     drawCursor()
 
@@ -220,16 +221,19 @@ function checkTools(y)
 end
 
 function applyTools()
+
+    mx, my = love.mouse.getPosition()
+
     -- MOVE
     if LIFTED == 1 then -- CANVAS
-        xoff = love.mouse.getX() - lastx
-        yoff = love.mouse.getY() - lasty
+        xoff = mx - lastx
+        yoff = my - lasty
     end
 
     -- SELECT
     if SELMODE == 1 then
         love.graphics.setColor(1,1,1,1)
-        love.graphics.rectangle("line",(SELECTED[0]*zoom)+xoff,(SELECTED[1]*zoom)+yoff,love.mouse.getX()-((SELECTED[0]*zoom)+xoff),love.mouse.getY()-((SELECTED[1]*zoom)+yoff))
+        love.graphics.rectangle("line",(SELECTED[0]*zoom)+xoff,(SELECTED[1]*zoom)+yoff,mx-((SELECTED[0]*zoom)+xoff),my-((SELECTED[1]*zoom)+yoff))
 
     elseif SELMODE == 2 then
         love.graphics.setColor(1,1,1,1)
@@ -371,7 +375,15 @@ function love.keypressed(k)
     if k == "space" then
         TOOL = TOOL + 1
         if TOOL > 3 then TOOL = 0 end
-        SELMODE = 0 -- ghosting rectangle selection box fix
+        -- SELMODE = 0 -- todo, keeping selection active properly deal with consequences
+    end
+
+    if k == "b" then -- B to clear selection, anytime for now, todo, check selmode free up b button elsewise
+        SELMODE = 0
+        SELECTED[0] = 0
+        SELECTED[1] = 0
+        SELECTED[2] = 0
+        SELECTED[3] = 0
     end
 
     if TOOL == 0 then -- pencil
@@ -390,13 +402,6 @@ function love.keypressed(k)
         end
 
     elseif TOOL == 2 then -- select
-        if k == "b" then
-            SELMODE = 0
-            SELECTED[0] = 0
-            SELECTED[1] = 0
-            SELECTED[2] = 0
-            SELECTED[3] = 0
-        end
         
         if SELMODE == 2 then
             if k == "x" then -- erase

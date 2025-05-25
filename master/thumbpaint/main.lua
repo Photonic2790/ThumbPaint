@@ -104,13 +104,16 @@ local lasty = 0
 local GRID = true
 local LIFTED = 0 -- 0 = empty, 1 = canvas, 2 = selection
 local SELECTED = { 0, 0, 0, 0 } -- x1, y1, x2, y2
-local SELMODE = 0 -- a selection helper, 0 = empty 1 = between points, 2 = full 
+local SELMODE = 0 -- a selection helper, 0 = empty 1 = between points, 2 = full
+local utf8 = require("utf8")
+local INTEXT =""
 
 
 function love.load()
     love.window.setTitle(TITLE)
     love.window.setMode(WINDOWWIDTH, WINDOWHEIGHT, {resizable=true, vsync=0, minwidth=320, minheight=240})
     love.graphics.setDefaultFilter("nearest", "nearest")
+    font = love.graphics.newFont(14)
     love.graphics.setBackgroundColor(BGCOLOR)
     cursor = love.graphics.newImage("gfx/cursor.png")
     love.mouse.setVisible(false)
@@ -161,6 +164,10 @@ function love.draw()
     drawToolBarH(15,385) -- x buffer on both sides, y top + 80 to bottom
     
     drawCursor()
+
+    if FILEMODE == 1 then
+        love.graphics.print(INTEXT, 20, 440)
+    end
 
 end
 
@@ -294,9 +301,6 @@ function drawCurrentColor(x,y) -- x,y = top left 32px radius, 72px sq background
     love.graphics.circle("fill",x+36, y+36, 32)
 end
 
-function checkColourSlider(y)
-
-end
 function drawColorSlider(y)    
     love.graphics.setColor(.7,.7,.7,1)
     love.graphics.rectangle("fill", 0, y, 550,80)    -- white backdrop
@@ -365,16 +369,45 @@ function setSelction()
     end
 end
 
+function love.textinput(t)
+    INTEXT = INTEXT .. t
+end
+
 function love.keypressed(k)
 
-    if k == "n" then
+    mx, my = love.mouse.getPosition()
+
+    if k == "backspace" then
+        if INTEXT then
+            local textoffset = utf8.offset(INTEXT, -1)
+            if textoffset then
+                INTEXT = string.sub(INTEXT, 1, textoffset - 1)
+            end
+        end
+    end
+
+    if k == "lctrl" then
         loadImageFile("temp.png")
         -- todo: test gptokey text input to load a file
             -- otherwise use a dedicated input folder and show a list.. for ipairs...
             -- a simple folder icon on the toolbar will do, until a top menubar shows up 
     end
 
-    if k == "g" then
+    if k == "tab" then
+        INTEXT = ""
+        FILEMODE = 1
+    end
+
+    if FILEMODE == 1 and k == "return" then
+        loadImageFile(INTEXT)
+    elseif k == "return" then
+        love.graphics.setCanvas()    
+        local imagedata = canvas:newImageData()
+        imagedata:encode("png", "temp.png")
+    end
+
+
+    if k == "rctrl" then
         if GRID then
             GRID = false
         else
@@ -389,12 +422,6 @@ function love.keypressed(k)
     if k == "pagedown" then
         zoom = zoom - .25
         if zoom < .5 then zoom = .5 end
-    end
-
-    if k == "return" then
-        love.graphics.setCanvas()    
-        local imagedata = canvas:newImageData()
-        imagedata:encode("png", "temp.png")
     end
 
     if k == "space" then
@@ -412,12 +439,13 @@ function love.keypressed(k)
         love.graphics.setCanvas(buffer)
         love.graphics.clear()
         love.graphics.setCanvas()
+        LIFTED = 0
     end
 
     if TOOL == 0 then -- pencil
     
         if k == "x" then
-            erasePixel((love.mouse.getX()-xoff)/zoom,(love.mouse.getY()-yoff)/zoom)
+            erasePixel((mx-xoff)/zoom,(my-yoff)/zoom)
     
         elseif k == "up" then
             yoff = yoff - 8
@@ -443,13 +471,15 @@ function love.keypressed(k)
                 love.graphics.setScissor()
                 bufferxoff = xoff
                 bufferyoff = yoff
+                lastx = mx - xoff
+                lasty = my - yoff
                 SELMODE = 3
                 LIFTED = 1   
             elseif k == "y" then -- copy
                 love.graphics.setCanvas(buffer)
                 love.graphics.clear()
                 setSelction()
-                love.graphics.draw(canvas,xoff,yoff)
+                love.graphics.draw(canvas,0,0)
                 love.graphics.setCanvas()
                 love.graphics.setScissor()
                 bufferxoff = xoff
@@ -460,7 +490,7 @@ function love.keypressed(k)
         elseif SELMODE == 3 then -- paste
             if k == "a" then
                 love.graphics.setCanvas(canvas)
-                love.graphics.draw(buffer,bufferxoff,bufferyoff)
+                love.graphics.draw(buffer, (bufferxoff-xoff)/zoom, (bufferyoff-yoff)/zoom)
                 love.graphics.setCanvas()
             end
         end
@@ -486,14 +516,13 @@ function love.mousepressed(x, y, button, it, p) -- look for isDown() also throug
             SELMODE = 1 -- onto next point
         end
     elseif button == 3 then -- move canvas anytime (middle mouse button)
-        if LIFTED == 0 then
-            lastx = x - xoff
-            lasty = y - yoff
-            LIFTED = 1 -- CANVAS
-        else
-            LIFTED = 0 -- EMPTY, DOWN
-            lastx = 0
-            lasty = 0
+        xoff = x - cx / 2
+        yoff = y - cy / 2
+        if SELMODE == 3 then
+            bufferxoff = x
+            bufferyoff = y
+            lastx = x
+            lasty = y
         end
     end
 end
@@ -512,13 +541,15 @@ function love.mousereleased(x, y, button, it, p)
     end
 end
 
-function love.wheelmoved(x, y) 
-    if y > 0 then
-        zoom = zoom + .25
-        if zoom > 100 then zoom = 100 end
-    end
-    if y < 0 then
-        zoom = zoom - .25
-        if zoom < .25 then zoom = .25 end
+function love.wheelmoved(x, y)
+    if SELMODE ~= 3 then
+        if y > 0 then
+            zoom = zoom + .25
+            if zoom > 100 then zoom = 100 end
+        end
+        if y < 0 then
+            zoom = zoom - .25
+            if zoom < .25 then zoom = .25 end
+        end
     end
 end

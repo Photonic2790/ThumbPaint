@@ -1,7 +1,3 @@
-TEXTINPUTINTERACTIVE="Y"
-TEXTINPUTNOAUTOCAPITALS="Y"
-TEXTINPUTADDEXTRASYMBOLS="Y"
-
 a = a
 a = repeat
 b = b
@@ -18,14 +14,17 @@ right = right
 
 l1 = pageup
 l2 = pagedown
-l3 = mouse_middle
+l3 = leftshift
 
 r1 = mouse_left
 r2 = mouse_right
-r3 = g
+r3 = leftctrl
 
 back = space
-start = enter
+start = /
+
+a_hk = enter
+y_hk = tab
 
 left_analog_up = mouse_movement_up
 

@@ -2,7 +2,7 @@
 --[[Description:
 A cross-platform high level image editor in love2d
 Designed for use on handheld consoles
-May 23rd, 2025
+May 25th, 2025
 ]]
 
 --[[Controls:
@@ -58,8 +58,8 @@ local TITLE = "ThumbPaint"
 local width, height = love.window.getMode()
 love.window.setMode(width, height, {fullscreen=true, resizable=true, vsync=0, minwidth=320, minheight=240})
 width, height = love.window.getMode()
-width = 640 -- debugging on desktop, forcing window size here
-height = 480
+-- width = 640 -- debugging on desktop, forcing window size here
+-- height = 480
 local WINDOWWIDTH  = width
 local WINDOWHEIGHT = height
 local BGCOLOR = { .2,  .2,  .2 }
@@ -79,9 +79,9 @@ local green = 0
 local blue  = 0
 local alpha = 255
 
--- fixed canvas size, change it here
-local cx = 16 -- canvas x size
-local cy = 16 -- canvas y size
+-- canvas size determined by input file at the moment
+local cx = 0 -- canvas x size
+local cy = 0 -- canvas y size
 
 -- mouse
 local zoom = 1 -- adjusted with mouse wheel
@@ -106,7 +106,7 @@ local LIFTED = 0 -- 0 = empty, 1 = canvas, 2 = selection
 local SELECTED = { 0, 0, 0, 0 } -- x1, y1, x2, y2
 local SELMODE = 0 -- a selection helper, 0 = empty 1 = between points, 2 = full
 local utf8 = require("utf8")
-local INTEXT =""
+local INTEXT = ""
 
 
 function love.load()
@@ -406,6 +406,16 @@ function love.keypressed(k)
         imagedata:encode("png", "temp.png")
     end
 
+    if k == "lshift" then -- move canvas anytime (shift)
+        xoff = mx - cx * zoom / 2
+        yoff = my - cy * zoom / 2
+        if SELMODE == 3 then
+            bufferxoff = mx
+            bufferyoff = my
+            lastx = mx
+            lasty = my
+        end
+    end
 
     if k == "rctrl" then
         if GRID then

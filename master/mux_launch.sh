@@ -26,6 +26,11 @@ cd $GAMEDIR
 
 export LD_LIBRARY_PATH="$GAMEDIR/libs:$LD_LIBRARY_PATH"
 
+export TEXTINPUTPRESET="test.png"
+export TEXTINPUTINTERACTIVE="Y"
+export TEXTINPUTNOAUTOCAPITALS="Y"
+export TEXTINPUTADDEXTRASYMBOLS="Y"
+
 $ESUDO chmod 666 /dev/uinput
 $GPTOKEYB "love" -c "$GPTOKEYB_CONFIG" &
 ./love thumbpaint

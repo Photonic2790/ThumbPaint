@@ -166,6 +166,7 @@ function love.draw()
     drawCursor()
 
     if FILEMODE == 1 then
+        love.graphics.print("Open File: 'Start' + 'D-pad Down' for handheld text input mode, then 'Select' + 'A'to load file.", 20, 420)
         love.graphics.print(INTEXT, 20, 440)
     end
 
@@ -400,6 +401,7 @@ function love.keypressed(k)
 
     if FILEMODE == 1 and k == "return" then
         loadImageFile(INTEXT)
+        FILEMODE = 0
     elseif k == "return" then
         love.graphics.setCanvas()    
         local imagedata = canvas:newImageData()
@@ -440,7 +442,7 @@ function love.keypressed(k)
         -- SELMODE = 0 -- todo, keeping selection active. properly deal with consequences
     end
 
-    if SELMODE > 0 and k == "b" then -- B to clear selection
+    if SELMODE > 0 and k == "backspace" then -- B to clear user variables
         SELMODE = 0
         SELECTED[0] = 0
         SELECTED[1] = 0
@@ -450,11 +452,13 @@ function love.keypressed(k)
         love.graphics.clear()
         love.graphics.setCanvas()
         LIFTED = 0
+        FILEMODE = 0
+        INTEXT = ""
     end
 
     if TOOL == 0 then -- pencil
     
-        if k == "x" then
+        if k == "delete" then
             erasePixel((mx-xoff)/zoom,(my-yoff)/zoom)
     
         elseif k == "up" then
@@ -470,7 +474,7 @@ function love.keypressed(k)
     elseif TOOL == 2 then -- select
         
         if SELMODE == 2 then
-            if k == "x" then -- cut
+            if k == "delete" then -- cut
                 love.graphics.setCanvas(buffer)
                 love.graphics.clear()
                 setSelction()
@@ -485,7 +489,7 @@ function love.keypressed(k)
                 lasty = my - yoff
                 SELMODE = 3
                 LIFTED = 1   
-            elseif k == "y" then -- copy
+            elseif k == "rshift" then -- copy
                 love.graphics.setCanvas(buffer)
                 love.graphics.clear()
                 setSelction()
@@ -500,7 +504,7 @@ function love.keypressed(k)
                 LIFTED = 1   
             end
         elseif SELMODE == 3 then -- paste
-            if k == "a" then
+            if k == "insert" then
                 love.graphics.setCanvas(canvas)
                 love.graphics.draw(buffer, (bufferxoff-xoff)/zoom, (bufferyoff-yoff)/zoom)
                 love.graphics.setCanvas()

@@ -1,10 +1,10 @@
-a = a
+a = insert
 a = repeat
-b = b
+b = backspace
 b = repeat
-x = x
+x = delete
 x = repeat
-y = y
+y = rightshift
 y = repeat
 
 up = up
@@ -18,7 +18,7 @@ l3 = leftshift
 
 r1 = mouse_left
 r2 = mouse_right
-r3 = leftctrl
+r3 = rightctrl
 
 back = space
 start = /

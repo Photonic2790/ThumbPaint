@@ -479,11 +479,13 @@ function love.keypressed(k)
                 love.graphics.setCanvas(buffer)
                 love.graphics.clear()
                 setSelction()
-                love.graphics.draw(canvas,0,0)
+                love.graphics.draw(canvas)
                 love.graphics.setCanvas()
                 love.graphics.setScissor()
                 bufferxoff = xoff
                 bufferyoff = yoff
+                lastx = mx - xoff
+                lasty = my - yoff
                 SELMODE = 3
                 LIFTED = 1   
             end
@@ -496,7 +498,6 @@ function love.keypressed(k)
         end
     end
 end
-
 
 function love.mousepressed(x, y, button, it, p) -- look for isDown() also throughout checkTools()
     if button == 1 then
@@ -516,8 +517,8 @@ function love.mousepressed(x, y, button, it, p) -- look for isDown() also throug
             SELMODE = 1 -- onto next point
         end
     elseif button == 3 then -- move canvas anytime (middle mouse button)
-        xoff = x - cx / 2
-        yoff = y - cy / 2
+        xoff = x - cx * zoom / 2
+        yoff = y - cy * zoom / 2
         if SELMODE == 3 then
             bufferxoff = x
             bufferyoff = y
@@ -542,14 +543,12 @@ function love.mousereleased(x, y, button, it, p)
 end
 
 function love.wheelmoved(x, y)
-    if SELMODE ~= 3 then
-        if y > 0 then
-            zoom = zoom + .25
-            if zoom > 100 then zoom = 100 end
-        end
-        if y < 0 then
-            zoom = zoom - .25
-            if zoom < .25 then zoom = .25 end
-        end
+    if y > 0 then
+        zoom = zoom + .25
+        if zoom > 100 then zoom = 100 end
+    end
+    if y < 0 then
+        zoom = zoom - .25
+        if zoom < .25 then zoom = .25 end
     end
 end
